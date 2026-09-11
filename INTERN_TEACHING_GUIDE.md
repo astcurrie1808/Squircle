@@ -370,6 +370,188 @@ effect can ripple through code that doesn't obviously mention the flag.
 
 ---
 
+## Hands-on exercises for the interns
+
+The four sections above are **demos** — you run them, the interns watch.
+This part is different: these are tasks the **interns do themselves**, at
+their own keyboard, in Spyder. Each one is deliberately tiny: predict →
+run → observe → change one thing → run again. That is the supervisor's
+whole method, turned into things they can touch.
+
+Hand them `intern_demo.py` (the companion script) and ask them to work
+through these in order. The demo script already has cells set up for each;
+these instructions tell them what to predict and what to change.
+
+### Exercise A — Read the data and inspect one trial (warm-up)
+
+**Goal:** confirm they can load data and look inside one trial tuple before
+plotting anything.
+
+1. Run **Cell 0** (imports) and **Cell 1** (point at the data) of
+   `intern_demo.py`. They should see one line printed per animal with
+   non-zero session and trial counts.
+2. Run **Cell 2** to load one subject's training trials:
+   ```python
+   train, probe = st.load_trials(data_path, name='Jinkx',
+                                 kind='Training', date='29_6_2026')
+   print(len(train), len(probe))
+   ```
+3. **Predict:** before running the next line, ask: "what does `train[0][15]`
+   give us?" (answer: the position DataFrame of the first trial — index 15,
+   from the tuple structure).
+4. **Run it and check:**
+   ```python
+   print(train[0][0])      # the name
+   print(train[0][6])      # the age
+   print(len(train[0][15])) # number of tracked frames
+   ```
+   They should see a name, an age in days, and a frame count.
+5. **Change one thing:** swap `name='Jinkx'` for another animal from the
+   Cell 1 printout, re-run Cell 2, and confirm `train[0][0]` now prints the
+   new name. **Lesson:** the tuple's position 0 is always the name, and
+   changing the input changed which animal's data we got.
+
+### Exercise B — Subset the data with plain Python
+
+**Goal:** show that filtering does not require reloading the file — you can
+slice a list you already have.
+
+1. After Exercise A, `train` is still in memory. Run:
+   ```python
+   subset = train[:5]
+   print(len(subset))
+   ```
+   They should see `5`.
+2. **Predict:** what does `train[5:]` give? (`len(train) - 5` trials —
+   everything *after* the first 5.)
+3. **Run it and check:** `print(len(train[5:]))`.
+4. **Change one thing:** make a subset of only trials to a specific well:
+   ```python
+   to_well3 = [t for t in train if t[8] == 3]
+   print(len(to_well3))
+   ```
+   `t[8]` is the rewarded-well field (index 8 of the tuple). Changing the
+   `3` to another well number changes the count. **Lesson:** the tuple's
+   numbered fields let you filter on any property without touching the JSON
+   or reloading.
+
+### Exercise C — Flip the colour toggle (the `separate_color_scale` demo, but they drive)
+
+**Goal:** they experience a boolean changing a visible output.
+
+1. Run **Cell 7** of `intern_demo.py` up to the load line, so `train2` and
+   `probe2` exist.
+2. Run the first plot call:
+   ```python
+   sv.plot_training_and_probes(train2, probe2, separate_color_scale=True)
+   ```
+   Ask them to describe what they see (two colour families, compact legend).
+3. **Predict:** "what will change if I set `separate_color_scale=False`?"
+4. **Run it:**
+   ```python
+   sv.plot_training_and_probes(train2, probe2, separate_color_scale=False)
+   ```
+   They should see a rainbow with many legend entries.
+5. **Open the code:** jump to `visualization.py` at the
+   `if separate_color_scale:` line and walk through the two branches
+   literally — True runs the two-palette block, the `else:` runs the turbo
+   block. **Lesson:** a boolean is a switch that picks a branch; the branch
+   picked is what changed the picture.
+
+### Exercise D — Flip two booleans in the loader (the `include_probes` / `same_day` demo, but they drive)
+
+**Goal:** they see a boolean change a *number* in the console, not just a
+picture — the cleanest possible input → output demo.
+
+1. Run, and read the count:
+   ```python
+   train, probe = st.load_trials(data_path, name='Jinkx',
+                                 kind='Training', date='29_6_2026')
+   print("probes:", len(probe))
+   ```
+   Expect `0` (default `include_probes=False`).
+2. **Predict:** "what will `len(probe)` be if I add `include_probes=True`?"
+3. **Run it:**
+   ```python
+   train, probe = st.load_trials(data_path, name='Jinkx',
+                                 kind='Training', date='29_6_2026',
+                                 include_probes=True)
+   print("probes:", len(probe))
+   ```
+   Expect > 0 — probes from the next day.
+4. **Predict:** "what will `same_day=True` change?"
+5. **Run it:**
+   ```python
+   train, probe = st.load_trials(data_path, name='Jinkx',
+                                 kind='Training', date='29_6_2026',
+                                 include_probes=True, same_day=True)
+   print("probes:", len(probe))
+   ```
+   The probe date is now the same as the training date; the count may change
+   (or not — see the teaching note in the demo above).
+6. **Open the code:** show the `if include_probes:` / `if same_day:` block in
+   `tools.py` and point at `probe_date = date` vs the `+ 1 day` branch.
+   **Lesson:** two nested booleans, each picking a branch; `same_day` only
+   matters *because* `include_probes` is True.
+
+### Exercise E — The stacking keyword (the stacked-bars demo, but they drive)
+
+**Goal:** they see one keyword (`bottom=`) change bar geometry.
+
+1. Run **Cell 8** of `intern_demo.py`:
+   ```python
+   sv.plot_trial_completion(data_path, subjects)
+   ```
+   Each bar reaches 100 (blue completed + red failed stacked).
+2. **Change the input:**
+   ```python
+   sv.plot_trial_completion(data_path, subjects[:3])
+   ```
+   Fewer bars, each still hits 100.
+3. **Optional — see the old way:** if you want to show *why* the new code is
+   better, open `plot_trial_completion` and point at the two `plt.bar`
+   lines. Mention (don't necessarily run) that removing `bottom=` would put
+   the bars side by side instead of stacked, so they wouldn't add to 100
+   visually. **Lesson:** one keyword (`bottom=`) turned "side by side" into
+   "stacked".
+
+### Exercise F — The reordering puzzle (the `env_split` demo, but they drive)
+
+**Goal:** they discover that a boolean can have a *side effect* beyond its
+obvious name — here, changing the on-plot order.
+
+1. Run:
+   ```python
+   sv.boxplot_quantiles(trials, 't1', 't4', env_split=True)
+   ```
+   Note the legend order (grouped by environment).
+2. **Predict:** "what will `env_split=False` change?" (Most will say "it just
+   removes the environment split" — that's the setup.)
+3. **Run it:**
+   ```python
+   sv.boxplot_quantiles(trials, 't1', 't4', env_split=False)
+   ```
+   Not only are environments pooled — the left-to-right order of the boxes is
+   *different*. Point at the legend before and after: that's the switch.
+4. **Open the code:** show the `quartile_sort_key` in `make_boxplot`. The
+   flag changed the *label string* (e.g. `"Circle (Baited) - T1"` → `"T1"`),
+   and the sort key parses that string, so the order changed too.
+   **Lesson:** a flag's effect can ripple through code that doesn't obviously
+   mention the flag. This is the most important conceptual exercise — it's
+   the one where being wrong in your prediction is the point.
+
+### How to run these with the interns
+
+- Do **Exercise A and B together** at the front first, because they teach
+  the tuple structure everyone needs for the rest.
+- Then let them do **C, D, E** independently — they're all the same pattern
+  (flip one input, re-run), so once they've done one, the others are easy.
+- Save **F** for last and do it as a group discussion, because the "predict
+  wrong on purpose" moment only works once, and the reordering cause is the
+  one thing in this guide that isn't obvious from the boolean's name.
+
+---
+
 ## Cheat sheet: the four boolean toggles in this repo
 
 | Function (file)              | Parameter             | `True` does                       | `False` does                       |
